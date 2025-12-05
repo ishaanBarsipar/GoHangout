@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gatherlocal-db
+    environment:
+      POSTGRES_DB: gatherlocal
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  backend:
+    # Make sure this path points to your Spring Boot folder
+    build: ./GoHangout
+    container_name: gatherlocal-api
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    environment:
+      # FIX 1: Host must be 'postgres' (the service name), NOT 'localhost'
+      # FIX 2: DB Name must be 'gatherlocal' (matches POSTGRES_DB above), NOT 'GoHangout'
+      DB_URL: jdbc:postgresql://postgres:5432/gatherlocal
+      DB_USERNAME: postgres
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
+    networks:
+      - app-network
+
+  frontend:
+    # Make sure this path points to your React folder
+    build: ./my-app1
+    container_name: gatherlocal-ui
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    environment:
+      VITE_CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      VITE_CLOUDINARY_UPLOAD_PRESET: ${CLOUDINARY_UPLOAD_PRESET}
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
